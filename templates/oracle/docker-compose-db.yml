@@ -1,0 +1,17 @@
+services:
+  oracle:
+    ## In case you need more features, you can use the full version of the Oracle image
+    ## See https://container-registry.oracle.com/ords/ocr/ba/database/free for more information
+    # image: container-registry.oracle.com/database/free:latest
+    image: container-registry.oracle.com/database/free:latest-lite
+    environment:
+      - ORACLE_PWD=<your-password-here>
+    volumes:
+      - oradata:/opt/oracle/oradata
+      ## Uncomment the following line to use a custom setup script
+      # - ./startup.sql:/opt/oracle/scripts/startup/startup.sql
+    ports:
+      - "1521:1521"
+
+volumes:
+  oradata:

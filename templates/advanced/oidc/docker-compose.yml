@@ -1,0 +1,132 @@
+services:
+  manager:
+    image: registry.planta.services/planta/manager:latest
+    environment:
+      - "planta__server__gui__host=worker"
+      - "planta__server__gui__port=21001"
+      ## Configure your License here
+      # - "planta__server__ppms_license=<your-license-here>"
+      ## Configure your database connection here
+      # - "planta__server__hibernate__connection__url=jdbc:oracle:thin:@<your-db-hostname>:<your-db-port>/<your-db-service-name>" # Alternatively, use the SID format: jdbc:oracle:thin:@<your-db-hostname>:<your-db-port>:<your-db-sid>
+      # - "planta__server__hibernate__connection__username=<your-db-username-here>"
+      # - "planta__server__hibernate__connection__password=<your-db-password-here>"
+      - "planta__server__webservices__generic_service__enable=true"
+      - "planta__server__webservices__generic_service__port=23333"
+      - "planta__server__webservices__generic_service__interface=0.0.0.0"
+      - "planta__server__secure__enabled=true"
+      - "planta__server__secure__servlet__connection=0.0.0.0:8181"
+      - "planta__server__secure__servlet__entrypoint=/secure"
+      - "planta__server__global_setting__planta_link_hostname=manager"
+      ## Configure the authentication settings here (for more information see https://help.planta.de/en/tec/all/oidc-mit-planta-secure)
+      # - "planta__server__auth__methods=openidconnect" # Possible values: (interactive|kerberos|any|ldap|openidconnect|pki)
+      # - "planta__server__secure__reverse_proxy__auth=true"
+      # - "planta__server__secure__reverse_proxy__user_format=plain"
+      # - "planta__server__secure__reverse_proxy__user_header=X-Forwarded-User"
+    depends_on:
+      customizing:
+        condition: service_completed_successfully
+        restart: true
+    networks:
+      - internal
+    ports:
+      - "8181:8181"
+      - "23333:23333"
+    volumes:
+      - transfer:/mnt/transfer:ro
+      ## Uncomment the following line to use a custom license file
+      # - /path/to/license.conf:/planta/config/license.conf
+
+  worker:
+    image: registry.planta.services/planta/worker:latest
+    restart: unless-stopped
+    environment:
+      - "SESSION_LINK=manager:54242"
+    depends_on:
+      manager:
+        condition: service_healthy
+        restart: true
+      customizing:
+        condition: service_completed_successfully
+        restart: true
+    ports:
+      - "21001:21001"
+    networks:
+      - internal
+    volumes:
+      - transfer:/mnt/transfer:ro
+
+  customizing:
+    image: registry.planta.services/planta/customizing:latest
+    volumes:
+      - transfer:/mnt/transfer:rw
+
+  webclient:
+    image: registry.planta.services/planta/webclient:latest
+    environment:
+      - "ConnectionSettings__Servers__0__Host=worker"
+      - "ConnectionSettings__Servers__0__Port=21001"
+      - "ConnectionSettings__RoutingWebHook=http://manager:23333/api/webclient/routing"
+      - "MessageDumperSettings__Enabled=false"
+      ## Configure the authentication settings here
+      # - "AuthenticationSettings__ProxyAuth=true"
+      # - "AuthenticationSettings__ProxyUserFormat=plain"
+      # - "AuthenticationSettings__ProxyUserHeader=X-Forwarded-User"
+      # - "AuthenticationSettings__AppPathBase=/"
+    depends_on:
+      manager:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    networks:
+      - internal
+    ports:
+      - "5000:5000"
+    volumes:
+      - web:/var/planta:rw
+
+  traefik:
+    image: traefik:v2.11
+    networks:
+      - internal
+    ports:
+      - "8888:8888"
+    volumes:
+      ## See below config files for more details
+      - ./traefik/static.yml:/etc/traefik/traefik.yml
+      - ./traefik/conf.d:/etc/traefik/conf.d
+
+  traefik-forward-auth-secure:
+    image: thomseddon/traefik-forward-auth:2
+    networks:
+      - internal
+    environment:
+      - INSECURE_COOKIE=true # Example assumes no https, do not use in production
+      - DEFAULT_PROVIDER=oidc
+      - LIFETIME=43200
+      - URL_PATH=/secure/_oauth
+      ## Replace the following with your OIDC configuration
+      # - SECRET=<your-random-secret>
+      # - PROVIDERS_OIDC_ISSUER_URL=<your-oidc-issuer-url>
+      # - PROVIDERS_OIDC_CLIENT_ID=<your-client-id>
+      # - PROVIDERS_OIDC_CLIENT_SECRET=<your-client-secret>
+
+  traefik-forward-auth-webclient:
+    image: thomseddon/traefik-forward-auth:2
+    networks:
+      - internal
+    environment:
+      - INSECURE_COOKIE=true # Example assumes no https, do not use in production
+      - DEFAULT_PROVIDER=oidc
+      - LIFETIME=43200
+      - URL_PATH=/_oauth
+      ## Replace the following with your OIDC configuration
+      # - SECRET=<your-random-secret>
+      # - PROVIDERS_OIDC_ISSUER_URL=<your-oidc-issuer-url>
+      # - PROVIDERS_OIDC_CLIENT_ID=<your-client-id>
+      # - PROVIDERS_OIDC_CLIENT_SECRET=<your-client-secret>
+
+networks:
+  internal:
+volumes:
+  transfer:
+  web:

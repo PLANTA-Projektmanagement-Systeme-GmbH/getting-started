@@ -1,0 +1,40 @@
+# --------------------- #
+# Dynamic Configuration #
+# --------------------- #
+
+http:
+  routers:
+    secure:
+      entryPoints:
+        - "web"
+      middlewares:
+        - "traefik-forward-auth-secure"
+      service: "secure"
+      rule: "Host(`localhost`) && PathPrefix(`/secure`)"
+    webclient:
+      entryPoints:
+        - "web"
+      middlewares:
+        - "traefik-forward-auth-webclient"
+      service: "webclient"
+      rule: "Host(`localhost`)"
+  middlewares:
+    traefik-forward-auth-secure:
+      forwardAuth:
+        address: "http://traefik-forward-auth-secure:4181"
+        authResponseHeaders:
+          - "X-Forwarded-User"
+    traefik-forward-auth-webclient:
+      forwardAuth:
+        address: "http://traefik-forward-auth-webclient:4181"
+        authResponseHeaders:
+          - "X-Forwarded-User"
+  services:
+    secure:
+      loadBalancer:
+        servers:
+          - url: "http://manager:8181"
+    webclient:
+      loadBalancer:
+        servers:
+          - url: "http://webclient:5000"

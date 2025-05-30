@@ -1,0 +1,40 @@
+services:
+  mssql:
+    ## See https://mcr.microsoft.com/artifact/mar/mssql/server/about for more information about the Microsoft SQL Server image
+    image: mcr.microsoft.com/mssql/server:latest
+    healthcheck:
+      test: "/opt/mssql-tools18/bin/sqlcmd -U sa -P $${MSSQL_SA_PASSWORD} -No -Q 'SELECT 1'"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=<your-password-here>
+      - MSSQL_PID=Developer
+    volumes:
+      - mssqldata:/var/opt/mssql
+    ports:
+      - "1433:1433"
+
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:latest
+    network_mode: service:mssql
+    environment:
+      - MSSQL_SA_PASSWORD=<your-password-here>
+    command: >
+      bash -c '
+        for file in ./sql-scripts/*.sql; do
+          echo "Executing SQL file $$file"
+          until /opt/mssql-tools18/bin/sqlcmd -U sa -P $${MSSQL_SA_PASSWORD} -No -i "$$file"; do
+            echo "Retry SQL execution for $$file"
+            sleep 1
+          done
+        done
+        exit 0
+      '
+    depends_on:
+      mssql:
+        condition: service_healthy
+    ## Uncomment the following line to use a custom setup script
+    # volumes:
+    #   - ./startup.sql:/sql-scripts/startup.sql
+
+volumes:
+  mssqldata:

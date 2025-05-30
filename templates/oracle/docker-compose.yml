@@ -1,0 +1,80 @@
+services:
+  manager:
+    image: registry.planta.services/planta/manager:latest
+    environment:
+      - "planta__server__gui__host=worker"
+      - "planta__server__gui__port=21001"
+      ## Configure your License here
+      # - "planta__server__ppms_license=<your-license-here>"
+      ## Configure your database connection here
+      # - "planta__server__hibernate__connection__url=jdbc:oracle:thin:@<your-db-hostname>:<your-db-port>/<your-db-service-name>" # Alternatively, use the SID format: jdbc:oracle:thin:@<your-db-hostname>:<your-db-port>:<your-db-sid>
+      # - "planta__server__hibernate__connection__username=<your-db-username-here>"
+      # - "planta__server__hibernate__connection__password=<your-db-password-here>"
+      - "planta__server__webservices__generic_service__enable=true"
+      - "planta__server__webservices__generic_service__port=23333"
+      - "planta__server__webservices__generic_service__interface=0.0.0.0"
+      - "planta__server__secure__enabled=true"
+      - "planta__server__secure__servlet__connection=0.0.0.0:8181"
+      - "planta__server__global_setting__planta_link_hostname=manager"
+    depends_on:
+      customizing:
+        condition: service_completed_successfully
+        restart: true
+    networks:
+      - internal
+    ports:
+      - "8181:8181"
+      - "23333:23333"
+    volumes:
+      - transfer:/mnt/transfer:ro
+      ## Uncomment the following line to use a custom license file
+      # - /path/to/license.conf:/planta/config/license.conf
+
+  worker:
+    image: registry.planta.services/planta/worker:latest
+    restart: unless-stopped
+    environment:
+      - "SESSION_LINK=manager:54242"
+    depends_on:
+      manager:
+        condition: service_healthy
+        restart: true
+      customizing:
+        condition: service_completed_successfully
+        restart: true
+    ports:
+      - "21001:21001"
+    networks:
+      - internal
+    volumes:
+      - transfer:/mnt/transfer:ro
+
+  customizing:
+    image: registry.planta.services/planta/customizing:latest
+    volumes:
+      - transfer:/mnt/transfer:rw
+
+  webclient:
+    image: registry.planta.services/planta/webclient:latest
+    environment:
+      - "ConnectionSettings__Servers__0__Host=worker"
+      - "ConnectionSettings__Servers__0__Port=21001"
+      - "ConnectionSettings__RoutingWebHook=http://manager:23333/api/webclient/routing"
+      - "MessageDumperSettings__Enabled=false"
+    depends_on:
+      manager:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    networks:
+      - internal
+    ports:
+      - "5000:5000"
+    volumes:
+      - web:/var/planta:rw
+
+networks:
+  internal:
+volumes:
+  transfer:
+  web:

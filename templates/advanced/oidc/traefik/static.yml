@@ -1,0 +1,18 @@
+# --------------------- #
+# Static Configuration  #
+# --------------------- #
+
+global:
+  checkNewVersion: false
+
+entryPoints:
+  web:
+    address: ":8888"
+
+providers:
+  file:
+    directory: "/etc/traefik/conf.d"
+    watch: true
+
+log:
+  level: "WARN" # DEBUG, PANIC, FATAL, ERROR, WARN, and INFO
