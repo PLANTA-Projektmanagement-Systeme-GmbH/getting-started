@@ -7,4 +7,4 @@
 
 A collection of public resources to help you get started with PLANTA, including setup templates, configuration examples, and more.
 
-<img src="https://www.planta.de/wp-content/uploads/Ganttbert_rechsoben.png" width="100" alt="Ganttbert" style="vertical-align: top; display: inline-block;" />
+<img src="https://www.planta.de/wp-content/uploads/Ganttbert_rechsoben.png" width="101" alt="Ganttbert" style="vertical-align: top; display: inline-block;" />
