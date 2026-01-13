@@ -121,7 +121,7 @@ services:
       - "8080:8080"
 
   mongo:
-    image: mongo:4.4.28
+    image: mongo:4.4.30
     command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
     healthcheck:
       test: "mongo --eval \"try { var status = rs.status(); status.ok === 0 ? rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}) : null } catch (err) { print(err); }\""
