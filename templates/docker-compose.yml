@@ -1,6 +1,7 @@
 services:
   manager:
     image: registry.planta.services/planta/manager:latest
+    restart: unless-stopped
     environment:
       - "planta__server__gui__host=worker"
       - "planta__server__gui__port=21001"
@@ -56,6 +57,7 @@ services:
 
   webclient:
     image: registry.planta.services/planta/webclient:latest
+    restart: unless-stopped
     environment:
       - "ConnectionSettings__Servers__0__Host=worker"
       - "ConnectionSettings__Servers__0__Port=21001"
